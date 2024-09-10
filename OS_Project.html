@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Banker's Algorithm</title>
+    <!-- Include Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #117a8b;
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .container {
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 30px;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="text-center mb-4">Banker's Algorithm</h2>
+
+        <div class="form-group">
+            <label for="processes">Enter no of processes:</label>
+            <input type="text" class="form-control" id="processes">
+        </div>
+
+        <div class="form-group">
+            <label for="resources">Enter no of resources:</label>
+            <input type="text" class="form-control" id="resources">
+        </div>
+
+        <button class="btn btn-primary btn-block" onclick="createInputFields()">Create Input Fields</button>
+
+        <div id="inputFields" class="mt-3"></div>
+
+        <button class="btn btn-success btn-block mt-3" onclick="calculate()">Calculate</button>
+
+        <p id="result" class="mt-3"></p>
+        <div id="needMatrix" class="mt-3"></div>
+    </div>
+
+    <!-- Include Bootstrap JS (optional) -->
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function createInputFields() {
+            let processes = parseInt(document.getElementById('processes').value);
+            let resources = parseInt(document.getElementById('resources').value);
+
+            let inputFieldsDiv = document.getElementById('inputFields');
+            inputFieldsDiv.innerHTML = '';
+
+            for (let i = 0; i < processes; i++) {
+                let allocationInputs = document.createElement('div');
+                allocationInputs.innerHTML = <label for="allocation${i}">Allocation for Process ${i}:</label>;
+                for (let j = 0; j < resources; j++) {
+                    let input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = allocation${i}${j};
+                    allocationInputs.appendChild(input);
+                }
+                inputFieldsDiv.appendChild(allocationInputs);
+
+                let maxInputs = document.createElement('div');
+                maxInputs.innerHTML = <label for="max${i}">Max for Process ${i}:</label>;
+                for (let j = 0; j < resources; j++) {
+                    let input = document.createElement('input');
+                    input.type = 'text';
+                    input.id = max${i}${j};
+                    maxInputs.appendChild(input);
+                }
+                inputFieldsDiv.appendChild(maxInputs);
+            }
+
+            let availableInputs = document.createElement('div');
+            availableInputs.innerHTML = '<label for="available">Available:</label>';
+            for (let i = 0; i < resources; i++) {
+                let input = document.createElement('input');
+                input.type = 'text';
+                input.id = available${i};
+                availableInputs.appendChild(input);
+            }
+            inputFieldsDiv.appendChild(availableInputs);
+        }
+
+        function calculate() {
+            let processes = parseInt(document.getElementById('processes').value);
+            let resources = parseInt(document.getElementById('resources').value);
+
+            let allocation = [];
+            let maximum = [];
+            let available = [];
+
+            for (let i = 0; i < processes; i++) {
+                let allocationRow = [];
+                for (let j = 0; j < resources; j++) {
+                    let val = parseInt(document.getElementById(allocation${i}${j}).value);
+                    allocationRow.push(val);
+                }
+                allocation.push(allocationRow);
+            }
+
+            for (let i = 0; i < processes; i++) {
+                let maxRow = [];
+                for (let j = 0; j < resources; j++) {
+                    let val = parseInt(document.getElementById(max${i}${j}).value);
+                    maxRow.push(val);
+                }
+                maximum.push(maxRow);
+            }
+
+            for (let i = 0; i < resources; i++) {
+                let val = parseInt(document.getElementById(available${i}).value);
+                available.push(val);
+            }
+
+            let need = [];
+            for (let i = 0; i < processes; i++) {
+                let needRow = [];
+                for (let j = 0; j < resources; j++) {
+                    needRow.push(maximum[i][j] - allocation[i][j]);
+                }
+                need.push(needRow);
+            }
+
+            let sequence = [];
+            let completed = new Array(processes).fill(false);
+            let work = [...available];
+
+            for (let k = 0; k < processes; k++) {
+                for (let i = 0; i < processes; i++) {
+                    if (!completed[i]) {
+                        let safe = true;
+                        for (let j = 0; j < resources; j++) {
+                            if (need[i][j] > work[j]) {
+                                safe = false;
+                                break;
+                            }
+                        }
+                        if (safe) {
+                            sequence.push(i);
+                            completed[i] = true;
+                            for (let j = 0; j < resources; j++) {
+                                work[j] += allocation[i][j];
+                            }
+                        }
+                    }
+                }
+            }
+
+            let result = document.getElementById('result');
+            if (sequence.length === processes) {
+                result.textContent = "Safe sequence: " + sequence.join(' -> ');
+            } else {
+                result.textContent = "Unsafe state detected";
+            }
+
+            // Display need matrix
+            let needMatrixDiv = document.getElementById('needMatrix');
+            needMatrixDiv.innerHTML = '<h4>Need Matrix:</h4>';
+            for (let i = 0; i < processes; i++) {
+                needMatrixDiv.innerHTML += <p>Process ${i}: ${need[i].join(', ')}</p>;
+            }
+        }
+    </script>
+</body>
+</html>
