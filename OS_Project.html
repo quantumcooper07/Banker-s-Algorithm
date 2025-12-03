@@ -1,175 +1,438 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Banker's Algorithm</title>
-    <!-- Include Bootstrap CSS -->
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <title>Banker's Algorithm Visualizer</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@400;600&display=swap');
+
         body {
-            background-color: #117a8b;
-            background-size: cover;
-            background-repeat: no-repeat;
-            background-attachment: fixed;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            font-family: 'Inter', sans-serif;
+            background-color: #0f172a;
+            color: #e2e8f0;
         }
-        .container {
-            background-color: rgba(255, 255, 255, 0.8);
-            padding: 30px;
-            border-radius: 10px;
+
+        .mono {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #1e293b;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #475569;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #64748b;
+        }
+
+        .input-cell {
+            transition: all 0.2s;
+        }
+
+        .input-cell:focus {
+            transform: scale(1.05);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+
+        .fade-in {
+            animation: fadeIn 0.5s ease-in;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <h2 class="text-center mb-4">Banker's Algorithm</h2>
 
-        <div class="form-group">
-            <label for="processes">Enter no of processes:</label>
-            <input type="text" class="form-control" id="processes">
-        </div>
+<body class="min-h-screen p-4 md:p-8">
 
-        <div class="form-group">
-            <label for="resources">Enter no of resources:</label>
-            <input type="text" class="form-control" id="resources">
-        </div>
-
-        <button class="btn btn-primary btn-block" onclick="createInputFields()">Create Input Fields</button>
-
-        <div id="inputFields" class="mt-3"></div>
-
-        <button class="btn btn-success btn-block mt-3" onclick="calculate()">Calculate</button>
-
-        <p id="result" class="mt-3"></p>
-        <div id="needMatrix" class="mt-3"></div>
+    <!-- Header -->
+    <div class="max-w-7xl mx-auto mb-8 text-center">
+        <h1 class="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400 mb-2">
+            <i class="fas fa-microchip mr-2"></i>Banker's Algorithm
+        </h1>
+        <p class="text-slate-400">Deadlock Avoidance & Safety Algorithm Visualizer</p>
     </div>
 
-    <!-- Include Bootstrap JS (optional) -->
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Configuration Section -->
+    <div class="max-w-4xl mx-auto bg-slate-800 rounded-xl shadow-lg border border-slate-700 p-6 mb-8">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Number of Processes (P)</label>
+                <input type="number" id="processCount" min="1" max="10" value="5"
+                    class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 text-white transition-colors">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-300 mb-2">Number of Resources (R)</label>
+                <input type="number" id="resourceCount" min="1" max="10" value="3"
+                    class="w-full bg-slate-900 border border-slate-600 rounded-lg px-4 py-2 focus:outline-none focus:border-blue-500 text-white transition-colors">
+            </div>
+            <button onclick="generateTable()"
+                class="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2 px-4 rounded-lg transition-all shadow-lg hover:shadow-blue-500/30 active:transform active:scale-95">
+                <i class="fas fa-table mr-2"></i>Generate Matrix
+            </button>
+        </div>
+    </div>
+
+    <!-- Matrix Input Section (Hidden by default) -->
+    <div id="matrixSection" class="hidden max-w-7xl mx-auto fade-in">
+
+        <!-- Resources Available -->
+        <div class="bg-slate-800 rounded-xl p-6 mb-6 border border-slate-700">
+            <h3 class="text-xl font-semibold text-emerald-400 mb-4 flex items-center">
+                <i class="fas fa-layer-group mr-2"></i> Available Resources
+            </h3>
+            <div id="availableContainer" class="flex flex-wrap gap-4">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+
+            <!-- Allocation Matrix -->
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-blue-400">
+                        <i class="fas fa-box-open mr-2"></i> Allocation Matrix
+                    </h3>
+                    <button onclick="fillRandom('alloc')"
+                        class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-slate-300">Random</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-center border-collapse">
+                        <thead id="allocHead" class="text-slate-400 text-sm"></thead>
+                        <tbody id="allocBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Max Matrix -->
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xl font-semibold text-purple-400">
+                        <i class="fas fa-bullseye mr-2"></i> Max Requirement Matrix
+                    </h3>
+                    <button onclick="fillRandom('max')"
+                        class="text-xs bg-slate-700 hover:bg-slate-600 px-2 py-1 rounded text-slate-300">Random</button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-center border-collapse">
+                        <thead id="maxHead" class="text-slate-400 text-sm"></thead>
+                        <tbody id="maxBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Action Buttons -->
+        <div class="flex justify-center mb-10">
+            <button onclick="calculateSafeSequence()"
+                class="bg-emerald-600 hover:bg-emerald-500 text-white text-lg font-bold py-3 px-8 rounded-full shadow-lg hover:shadow-emerald-500/30 transition-all transform hover:-translate-y-1">
+                <i class="fas fa-calculator mr-2"></i> Calculate Safety
+            </button>
+        </div>
+
+        <!-- Results Section -->
+        <div id="resultSection" class="hidden grid grid-cols-1 lg:grid-cols-3 gap-8 fade-in pb-20">
+
+            <!-- Need Matrix (Calculated) -->
+            <div class="bg-slate-800 rounded-xl p-6 border border-slate-700">
+                <h3 class="text-xl font-semibold text-orange-400 mb-4">
+                    <i class="fas fa-calculator mr-2"></i> Calculated Need Matrix
+                </h3>
+                <p class="text-xs text-slate-500 mb-2">(Max - Allocation)</p>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-center border-collapse">
+                        <thead id="needHead" class="text-slate-400 text-sm"></thead>
+                        <tbody id="needBody" class="mono text-slate-200"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Calculation Log & Result -->
+            <div class="lg:col-span-2 bg-slate-800 rounded-xl p-6 border border-slate-700 flex flex-col">
+                <h3 class="text-xl font-semibold text-slate-200 mb-4">
+                    <i class="fas fa-clipboard-list mr-2"></i> Execution Log
+                </h3>
+
+                <div id="statusBanner" class="mb-4 p-4 rounded-lg text-center font-bold text-lg hidden"></div>
+
+                <div class="bg-slate-900 rounded-lg p-4 font-mono text-sm text-slate-300 h-64 overflow-y-auto border border-slate-700"
+                    id="logs">
+                    <!-- Logs go here -->
+                </div>
+
+                <div class="mt-4 pt-4 border-t border-slate-700">
+                    <span class="text-slate-400">Final Safe Sequence:</span>
+                    <div id="finalSequence" class="flex gap-2 mt-2 flex-wrap">
+                        <!-- Sequence badges go here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
     <script>
-        function createInputFields() {
-            let processes = parseInt(document.getElementById('processes').value);
-            let resources = parseInt(document.getElementById('resources').value);
+        let processes = 0;
+        let resources = 0;
 
-            let inputFieldsDiv = document.getElementById('inputFields');
-            inputFieldsDiv.innerHTML = '';
+        function generateTable() {
+            processes = parseInt(document.getElementById('processCount').value);
+            resources = parseInt(document.getElementById('resourceCount').value);
 
-            for (let i = 0; i < processes; i++) {
-                let allocationInputs = document.createElement('div');
-                allocationInputs.innerHTML = <label for="allocation${i}">Allocation for Process ${i}:</label>;
-                for (let j = 0; j < resources; j++) {
-                    let input = document.createElement('input');
-                    input.type = 'text';
-                    input.id = allocation${i}${j};
-                    allocationInputs.appendChild(input);
-                }
-                inputFieldsDiv.appendChild(allocationInputs);
-
-                let maxInputs = document.createElement('div');
-                maxInputs.innerHTML = <label for="max${i}">Max for Process ${i}:</label>;
-                for (let j = 0; j < resources; j++) {
-                    let input = document.createElement('input');
-                    input.type = 'text';
-                    input.id = max${i}${j};
-                    maxInputs.appendChild(input);
-                }
-                inputFieldsDiv.appendChild(maxInputs);
+            if (processes < 1 || resources < 1) {
+                alert("Please enter valid positive numbers.");
+                return;
             }
 
-            let availableInputs = document.createElement('div');
-            availableInputs.innerHTML = '<label for="available">Available:</label>';
+            // Headers
+            let resourceHeaders = '<tr><th class="p-2">Proc</th>';
             for (let i = 0; i < resources; i++) {
-                let input = document.createElement('input');
-                input.type = 'text';
-                input.id = available${i};
-                availableInputs.appendChild(input);
+                resourceHeaders += `<th class="p-2 text-xs uppercase tracking-wider">R${i}</th>`;
             }
-            inputFieldsDiv.appendChild(availableInputs);
+            resourceHeaders += '</tr>';
+
+            document.getElementById('allocHead').innerHTML = resourceHeaders;
+            document.getElementById('maxHead').innerHTML = resourceHeaders;
+            document.getElementById('needHead').innerHTML = resourceHeaders;
+
+            // Allocation Body
+            let allocHtml = '';
+            for (let i = 0; i < processes; i++) {
+                allocHtml += `<tr><td class="font-bold text-slate-500">P${i}</td>`;
+                for (let j = 0; j < resources; j++) {
+                    allocHtml += `<td class="p-1"><input type="number" min="0" id="alloc-${i}-${j}" class="input-cell w-12 sm:w-16 bg-slate-900 border border-slate-600 rounded text-center text-white py-1 focus:outline-none focus:border-blue-500" value="0"></td>`;
+                }
+                allocHtml += '</tr>';
+            }
+            document.getElementById('allocBody').innerHTML = allocHtml;
+
+            // Max Body
+            let maxHtml = '';
+            for (let i = 0; i < processes; i++) {
+                maxHtml += `<tr><td class="font-bold text-slate-500">P${i}</td>`;
+                for (let j = 0; j < resources; j++) {
+                    maxHtml += `<td class="p-1"><input type="number" min="0" id="max-${i}-${j}" class="input-cell w-12 sm:w-16 bg-slate-900 border border-slate-600 rounded text-center text-white py-1 focus:outline-none focus:border-purple-500" value="0"></td>`;
+                }
+                maxHtml += '</tr>';
+            }
+            document.getElementById('maxBody').innerHTML = maxHtml;
+
+            // Available Inputs
+            let availHtml = '';
+            for (let i = 0; i < resources; i++) {
+                availHtml += `
+                    <div class="flex flex-col items-center">
+                        <label class="text-xs text-slate-400 mb-1">R${i}</label>
+                        <input type="number" min="0" id="avail-${i}" class="input-cell w-16 bg-slate-900 border border-slate-600 rounded text-center text-emerald-400 font-bold py-2 focus:outline-none focus:border-emerald-500" value="0">
+                    </div>
+                `;
+            }
+            document.getElementById('availableContainer').innerHTML = availHtml;
+
+            // Show Section
+            document.getElementById('matrixSection').classList.remove('hidden');
+            document.getElementById('resultSection').classList.add('hidden');
         }
 
-        function calculate() {
-            let processes = parseInt(document.getElementById('processes').value);
-            let resources = parseInt(document.getElementById('resources').value);
-
+        function calculateSafeSequence() {
+            // 1. Parse Inputs
             let allocation = [];
-            let maximum = [];
+            let max = [];
             let available = [];
-
-            for (let i = 0; i < processes; i++) {
-                let allocationRow = [];
-                for (let j = 0; j < resources; j++) {
-                    let val = parseInt(document.getElementById(allocation${i}${j}).value);
-                    allocationRow.push(val);
-                }
-                allocation.push(allocationRow);
-            }
-
-            for (let i = 0; i < processes; i++) {
-                let maxRow = [];
-                for (let j = 0; j < resources; j++) {
-                    let val = parseInt(document.getElementById(max${i}${j}).value);
-                    maxRow.push(val);
-                }
-                maximum.push(maxRow);
-            }
-
-            for (let i = 0; i < resources; i++) {
-                let val = parseInt(document.getElementById(available${i}).value);
-                available.push(val);
-            }
-
             let need = [];
+
+            // Get Allocation & Max
             for (let i = 0; i < processes; i++) {
-                let needRow = [];
+                let rowAlloc = [];
+                let rowMax = [];
                 for (let j = 0; j < resources; j++) {
-                    needRow.push(maximum[i][j] - allocation[i][j]);
+                    let a = parseInt(document.getElementById(`alloc-${i}-${j}`).value) || 0;
+                    let m = parseInt(document.getElementById(`max-${i}-${j}`).value) || 0;
+
+                    if (a > m) {
+                        alert(`Error at P${i}, R${j}: Allocation cannot be greater than Max.`);
+                        return;
+                    }
+
+                    rowAlloc.push(a);
+                    rowMax.push(m);
                 }
-                need.push(needRow);
+                allocation.push(rowAlloc);
+                max.push(rowMax);
+
+                // Calculate Need Row
+                let rowNeed = rowMax.map((val, idx) => val - rowAlloc[idx]);
+                need.push(rowNeed);
             }
 
-            let sequence = [];
-            let completed = new Array(processes).fill(false);
-            let work = [...available];
+            // Get Available
+            for (let i = 0; i < resources; i++) {
+                available.push(parseInt(document.getElementById(`avail-${i}`).value) || 0);
+            }
 
-            for (let k = 0; k < processes; k++) {
-                for (let i = 0; i < processes; i++) {
-                    if (!completed[i]) {
-                        let safe = true;
-                        for (let j = 0; j < resources; j++) {
-                            if (need[i][j] > work[j]) {
-                                safe = false;
+            // 2. Display Need Matrix
+            let needBody = '';
+            for (let i = 0; i < processes; i++) {
+                needBody += `<tr><td class="font-bold text-slate-500">P${i}</td>`;
+                for (let j = 0; j < resources; j++) {
+                    needBody += `<td class="p-2 border border-slate-700 bg-slate-900">${need[i][j]}</td>`;
+                }
+                needBody += '</tr>';
+            }
+            document.getElementById('needBody').innerHTML = needBody;
+
+            // 3. Run Algorithm
+            runBankersAlgo(allocation, need, available);
+            document.getElementById('resultSection').classList.remove('hidden');
+        }
+
+        function runBankersAlgo(allocation, need, available) {
+            let logs = document.getElementById('logs');
+            logs.innerHTML = ''; // Clear logs
+
+            let work = [...available];
+            let finish = new Array(processes).fill(false);
+            let safeSeq = [];
+
+            addLog(`Initial Available Resources: [ ${work.join(', ')} ]`, 'info');
+
+            let count = 0;
+            while (count < processes) {
+                let found = false;
+
+                for (let p = 0; p < processes; p++) {
+                    if (finish[p] === false) {
+
+                        // Check if Need <= Work
+                        let canAllocate = true;
+                        for (let r = 0; r < resources; r++) {
+                            if (need[p][r] > work[r]) {
+                                canAllocate = false;
                                 break;
                             }
                         }
-                        if (safe) {
-                            sequence.push(i);
-                            completed[i] = true;
-                            for (let j = 0; j < resources; j++) {
-                                work[j] += allocation[i][j];
+
+                        if (canAllocate) {
+                            addLog(`--> Checking P${p}: Need [${need[p]}] <= Available [${work}]? YES.`, 'success');
+
+                            // Execute Process
+                            for (let r = 0; r < resources; r++) {
+                                work[r] += allocation[p][r];
                             }
+
+                            addLog(`    P${p} Executed. New Available: [ ${work.join(', ')} ]`, 'neutral');
+
+                            safeSeq.push(p);
+                            finish[p] = true;
+                            found = true;
+                            count++;
+                        } else {
+                            // Only log failure if we haven't found anything in a full loop to avoid spam
+                            // or log purely for debugging
+                            // addLog(`Checking P${p}: Need [${need[p]}] > Available [${work}]. Skipped.`, 'dim');
+                        }
+                    }
+                }
+
+                if (found === false) {
+                    break; // Deadlock
+                }
+            }
+
+            // Final Result UI
+            let banner = document.getElementById('statusBanner');
+            let seqContainer = document.getElementById('finalSequence');
+            seqContainer.innerHTML = '';
+
+            if (count < processes) {
+                banner.className = "mb-4 p-4 rounded-lg text-center font-bold text-lg bg-red-900/50 text-red-300 border border-red-700";
+                banner.innerHTML = '<i class="fas fa-exclamation-triangle mr-2"></i> Unsafe State Detected! Deadlock possible.';
+                banner.classList.remove('hidden');
+                addLog('System is in an UNSAFE state.', 'error');
+            } else {
+                banner.className = "mb-4 p-4 rounded-lg text-center font-bold text-lg bg-emerald-900/50 text-emerald-300 border border-emerald-700";
+                banner.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Safe State! System is stable.';
+                banner.classList.remove('hidden');
+                addLog('System is in a SAFE state.', 'success');
+
+                // Draw sequence badges
+                safeSeq.forEach((p, index) => {
+                    let badge = document.createElement('span');
+                    badge.className = "bg-blue-600 px-3 py-1 rounded-full text-sm font-mono shadow";
+                    badge.innerText = `P${p}`;
+                    seqContainer.appendChild(badge);
+
+                    if (index < safeSeq.length - 1) {
+                        let arrow = document.createElement('span');
+                        arrow.className = "text-slate-500 self-center";
+                        arrow.innerHTML = '<i class="fas fa-arrow-right"></i>';
+                        seqContainer.appendChild(arrow);
+                    }
+                });
+            }
+        }
+
+        function addLog(msg, type) {
+            let colorClass = "text-slate-300";
+            if (type === 'success') colorClass = "text-emerald-400";
+            if (type === 'error') colorClass = "text-red-400";
+            if (type === 'info') colorClass = "text-blue-300";
+            if (type === 'dim') colorClass = "text-slate-600";
+            if (type === 'neutral') colorClass = "text-slate-400 pl-4";
+
+            let div = document.createElement('div');
+            div.className = `mb-1 ${colorClass}`;
+            div.innerText = msg;
+            document.getElementById('logs').appendChild(div);
+            // Auto scroll
+            document.getElementById('logs').scrollTop = document.getElementById('logs').scrollHeight;
+        }
+
+        function fillRandom(type) {
+            let maxVal = 10;
+            for (let i = 0; i < processes; i++) {
+                for (let j = 0; j < resources; j++) {
+                    let el = document.getElementById(`${type}-${i}-${j}`);
+                    if (el) {
+                        // If generating allocation, make sure it's not higher than max if max exists
+                        if (type === 'alloc') {
+                            let maxEl = document.getElementById(`max-${i}-${j}`);
+                            let limit = maxEl ? parseInt(maxEl.value) : 5;
+                            // Ensure non-zero limit
+                            limit = limit === 0 ? 5 : limit;
+                            el.value = Math.floor(Math.random() * (limit + 1));
+                        } else {
+                            el.value = Math.floor(Math.random() * maxVal);
                         }
                     }
                 }
             }
-
-            let result = document.getElementById('result');
-            if (sequence.length === processes) {
-                result.textContent = "Safe sequence: " + sequence.join(' -> ');
-            } else {
-                result.textContent = "Unsafe state detected";
-            }
-
-            // Display need matrix
-            let needMatrixDiv = document.getElementById('needMatrix');
-            needMatrixDiv.innerHTML = '<h4>Need Matrix:</h4>';
-            for (let i = 0; i < processes; i++) {
-                needMatrixDiv.innerHTML += <p>Process ${i}: ${need[i].join(', ')}</p>;
-            }
         }
     </script>
 </body>
+
 </html>
